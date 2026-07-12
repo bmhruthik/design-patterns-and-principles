@@ -6,10 +6,6 @@ public static class Demo
     {
         Console.WriteLine("Running DIP Demo");
 
-        // create objects
-
-        // call methods
-
-        // print output
+        Levelone.Run();
     }
 }
