@@ -12,6 +12,98 @@ This guide is designed for a senior .NET interview. Each section gives a concise
 
 > Kestrel receives the HTTP request and ASP.NET Core creates an `HttpContext`. The request then travels through the middleware pipeline in registration order. Middleware can inspect or change the request, short-circuit it, or run code after the next component completes. Routing selects an endpoint; authentication establishes the user identity; authorization checks endpoint policies; model binding and validation create endpoint parameters; finally the controller/minimal API handler executes. The response travels back outward through the middleware pipeline, where logging, exception handling, headers, and response transforms can run.
 
+#### kestral 
+
+```
+Kestrel is the web server included with ASP.NET Core. if we run the application ex : Now listening on: http://localhost:5000 -> 
+“The application is waiting for HTTP requests arriving on port 5000.”
+
+the operating system directs the request to the application listening on port `5000`. Kestrel receives it.
+
+Think of Kestrel as the front door of your application.
+
+Kestrel converts the incoming network data into something ASP.NET Core can work with.
+```
+
+#### httpcontext
+
+For every request, ASP.NET Core creates an object called: HttpContext -> `HttpContext` is like a **request folder** that travels through the application. It contains information about both the request and the response.
+
+> HttpContext.Reques
+> HttpContext.Response
+> HttpContext.User
+>
+> ex:
+> var method = HttpContext.Request.Method; -> Method: GET
+> var path = HttpContext.Request.Path; -> Path: /products/10
+
+It also contains:
+
+* Request headers
+* Cookies
+* Query-string values
+* Request body
+* Logged-in user information
+* Response status code
+* Response headers
+* Response body
+* Request-specific services
+
+#### middleware pipeline
+
+**Middleware** is code that executes before or after your controller or API handler,  Think of middleware as a series of  **security and processing checkpoints** .
+
+> Request -> Middleware 1 -> Middleware 2 -> Middleware 3 -> Controller
+
+Middleware is normally registered in `Program.cs`
+
+```C#
+app.UseExceptionHandler("/error");
+app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+```
+
+The registration order is important. The request generally passes through them from top to bottom.
+
+#### What can middleware do?
+
+A middleware component can:
+
+1. Inspect the request
+2. Change the request
+3. Pass the request to the next middleware
+4. Stop the request immediately
+5. Modify the response after the controller finishes
+
+#### Routing finds the correct endpoint
+
+The application may have many possible endpoints: ( GET  /products,   GET  /products/10,  POST /products,   GET  /customers ) **Routing** decides which controller action or Minimal API handler should receive the request.
+
+Routing compares the request with the available route in controller and do mapping
+
+The **routing system** is supplied by ASP.NET Core. You define routes using attributes such as:  `[Route("products")]`  `[HttpGet("{id}")]` or with minimal API 
+
+```C#
+app.MapGet("/products/{id}", (int id) => 
+           {   
+             return $"Product ID: {id}";
+           });
+```
+
+#### Authentication determines who the user is : 
+
+authentication ask “Who is making this request?” 
+
+For example, the request might contain a JWT access token: -> Authentication examines the token. -> If it is valid, ASP.NET Core creates a user identity and places it in:  `HttpContext.User`
+
+> The authentication framework is provided by ASP.NET Core, but your application must configure it.
+
+ex : `builder.Services.AddAuthentication().AddJwtBearer();` -> This registers the authentication services and JWT token handler. But registration alone does not process incoming requests.
+
+You then add authentication to the request pipeline:  in middleware pipline : -> `app.UseAuthentication();`
+
 ### Request flow
 
 ```mermaid
@@ -27,6 +119,15 @@ flowchart LR
 ```
 
 Middleware executes like nested calls: code before `await next(context)` runs on the way in; code after it runs on the way out. Order matters. Exception handling must be early so it can catch downstream exceptions; authentication must happen before authorization.
+
+> ex :
+> Request going inward
+>   Middleware A: before
+> 	Middleware B: before
+> 		Controller executes
+> 	Middleware B: after
+>    Middleware A: after
+> Response going outward
 
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
@@ -46,7 +147,7 @@ app.Run();
 
 In a controller, model binding gets values from route/query/header/body; input formatters deserialize JSON; validation runs; then the action executes. In Minimal APIs, validation/binding behavior depends on the endpoint setup and types used, so make validation explicit when required.
 
-## 2. Middleware and global exception handling
+#### 2. Middleware and global exception handling
 
 ### Interview answer
 
@@ -104,10 +205,10 @@ Do not use exception handling for normal validation flow. Return 400/422 deliber
 
 ## 3. Authentication versus authorization
 
-| Concept | Question answered | Example |
-| --- | --- | --- |
-| Authentication | “Who are you?” | Validate an access token and construct a `ClaimsPrincipal`. |
-| Authorization | “Are you allowed to do this?” | Permit a user to refund only their own order, or an admin to refund any order. |
+| Concept        | Question answered               | Example                                                                        |
+| -------------- | ------------------------------- | ------------------------------------------------------------------------------ |
+| Authentication | “Who are you?”                | Validate an access token and construct a`ClaimsPrincipal`.                   |
+| Authorization  | “Are you allowed to do this?” | Permit a user to refund only their own order, or an admin to refund any order. |
 
 Authentication happens first. It establishes the identity. Authorization then evaluates roles, claims, scopes, policies, resource ownership, and other rules.
 
@@ -414,12 +515,12 @@ Avoid enabling lazy loading by default in web APIs; it makes database access inv
 
 ## 12. Include vs Select vs explicit loading vs lazy loading
 
-| Technique | Best use | Main risk |
-| --- | --- | --- |
-| `Select` projection | API/read model; fetch only needed fields, calculate in SQL | More mapping code, but usually worth it. |
-| `Include` | Small, known object graph needed for a domain operation | Multiple collections can multiply rows/cartesian explode. |
-| Explicit loading | Conditional, intentional loading of one navigation | Can become N+1 inside loops. |
-| Lazy loading | Rarely, controlled desktop/domain scenarios | Hidden queries, N+1, surprising serialization. |
+| Technique             | Best use                                                   | Main risk                                                 |
+| --------------------- | ---------------------------------------------------------- | --------------------------------------------------------- |
+| `Select` projection | API/read model; fetch only needed fields, calculate in SQL | More mapping code, but usually worth it.                  |
+| `Include`           | Small, known object graph needed for a domain operation    | Multiple collections can multiply rows/cartesian explode. |
+| Explicit loading      | Conditional, intentional loading of one navigation         | Can become N+1 inside loops.                              |
+| Lazy loading          | Rarely, controlled desktop/domain scenarios                | Hidden queries, N+1, surprising serialization.            |
 
 ```csharp
 // Explicit loading: intentional one-off; do not place this in a loop over orders.
@@ -474,12 +575,12 @@ limit 50;
 
 Common phenomena: dirty reads (seeing uncommitted data), non-repeatable reads (a row changes between two reads), and phantom reads (a query returns additional rows later). Exact behavior is database-specific.
 
-| Level | Typical trade-off |
-| --- | --- |
-| Read committed | Common default; avoids dirty reads, but a repeated read may differ. |
-| Repeatable read | Stabilizes rows read in a transaction; may use stronger locks/versioning. |
-| Serializable | Strongest illusion of serial execution; can cause blocking/serialization failures and requires retry. |
-| Snapshot/MVCC variants | Readers see a consistent version; write conflicts still need handling. |
+| Level                  | Typical trade-off                                                                                     |
+| ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| Read committed         | Common default; avoids dirty reads, but a repeated read may differ.                                   |
+| Repeatable read        | Stabilizes rows read in a transaction; may use stronger locks/versioning.                             |
+| Serializable           | Strongest illusion of serial execution; can cause blocking/serialization failures and requires retry. |
+| Snapshot/MVCC variants | Readers see a consistent version; write conflicts still need handling.                                |
 
 ```csharp
 await using var transaction = await db.Database.BeginTransactionAsync(
