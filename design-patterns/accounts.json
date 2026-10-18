@@ -1,0 +1,22 @@
+[
+  {
+    "Id": 3,
+    "AccountHolder": "Hruthik",
+    "Balance": 1300
+  },
+  {
+    "Id": 4,
+    "AccountHolder": "Rahul",
+    "Balance": 2000
+  },
+  {
+    "Id": 1,
+    "AccountHolder": "Hruthik",
+    "Balance": 1300
+  },
+  {
+    "Id": 2,
+    "AccountHolder": "Rahul",
+    "Balance": 2000
+  }
+]
